@@ -2,6 +2,8 @@ import psycopg2, psycopg2.extras
 from datetime import datetime
 
 
+
+
 class Databases():
     def __init__(self):
         self.db = psycopg2.connect(
@@ -58,9 +60,9 @@ class SELECT(Databases):
 
     def UserConnectLog(self):
         sql = '''
-        SELECT DISTINCT to_char("login_date", 'YYYY-MM-DD') AS login_date, user_id
+        SELECT DISTINCT to_char(login_date AT TIME ZONE 'Asia/Seoul', 'YYYY-MM-DD') AS login_date, user_id
         FROM users.tbl_login_log
-        ORDER BY login_date, user_id
+        ORDER BY user_id, login_date
         '''
         try:
             self.cursor.execute(sql)
@@ -80,6 +82,49 @@ class SELECT(Databases):
         except Exception as e:
             result = (" read DB err", e)
         return result
+
+    def AvtClItem(self):
+        sql = '''
+        SELECT avtcl.avatar_id AS avt_id, item.id AS item_id
+        FROM avatar.tbl_avatar_cl AS avtcl
+        LEFT OUTER JOIN item.tbl_clothes AS item
+        ON avtcl.clothes_id = item.id
+        '''
+        try:
+            self.cursor.execute(sql)
+            result = self.cursor.fetchall()
+        except Exception as e:
+            result = (" read DB err", e)
+        return result
+
+    def AvtEqItem(self):
+        sql = '''
+        SELECT avteq.avatar_id AS avt_id, item.id AS item_id
+        FROM avatar.tbl_avatar_eq AS avteq
+        LEFT OUTER JOIN item.tbl_clothes AS item
+        ON avteq.clothes_id = item.id
+        '''
+        try:
+            self.cursor.execute(sql)
+            result = self.cursor.fetchall()
+        except Exception as e:
+            result = (" read DB err", e)
+        return result
+
+    def FollowCount(self):
+        sql = '''
+        SELECT COUNT(*)
+        FROM avatar.tbl_follow
+        '''
+        try:
+            self.cursor.execute(sql)
+            result = self.cursor.fetchall()
+        except Exception as e:
+            result = (" read DB err", e)
+        return result
+
+
+
 
 select = SELECT()
 
@@ -122,7 +167,6 @@ for cl in connect_log:
     if key_temp not in login_data.keys():
         # key(=user_id) => not string, but int
         login_data[key_temp] = []
-
     # value(=login_date) => not datetime, but string
     login_data[key_temp].append(user_id)
 
@@ -152,3 +196,46 @@ for ld in login_data.items():
 ##### 생성 아이템 수 #####
 generate_item_cnt = select.ItemCount()[0]['generateitem_cnt']
 # print(generate_item_cnt)
+
+##### 모든 아이템에 대한 누적 소유권 이전 횟수 #####
+cl_item = select.AvtClItem()
+eq_item = select.AvtEqItem()
+
+item_data = {}
+
+for cl in cl_item:
+    key_temp = cl['avt_id']
+    item_id = cl['item_id']
+
+    if key_temp not in item_data.keys():
+        # key(=avt_id) => not string, but int
+        item_data[key_temp] = []
+    # value(=item_id) => not string, but int
+    item_data[key_temp].append(item_id)
+
+for eq in eq_item:
+    key_temp = eq['avt_id']
+    item_id = eq['item_id']
+
+    if key_temp not in item_data.keys():
+        # key(=avt_id) => not string, but int
+        item_data[key_temp] = []
+    # value(=item_id) => not string, but int
+    item_data[key_temp].append(item_id)
+
+result_count = 0
+temp = list(item_data.items())
+while temp:
+    now_avt, now_item = temp.pop(0)
+    for item_info in item_data.items():
+        if now_avt != item_info[0]:
+            now_info = item_info[1]
+            for now in now_item:
+                if now in now_info:
+                    result_count += 1
+
+# print(result_count)
+
+#################### 누적 친구 추가 횟수 ####################
+follow_all_count = select.FollowCount()[0]['count']
+# print(follow_all_count)
