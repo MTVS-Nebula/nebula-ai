@@ -4,7 +4,6 @@ import clip, os, torch, math, sys, io, requests, urllib, json, psycopg2, psycopg
 from multilingual_clip import pt_multilingual_clip
 import transformers
 from PIL import Image
-from flask import Flask, request
 import umap
 
 
