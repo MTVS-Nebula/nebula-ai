@@ -168,9 +168,9 @@ for k, v in req.items():
 sphere_coord = umap_haversine.fit_transform(image_text_features)
 del image_text_features
 
-x_coord = np.sin(sphere_coord[:, 0]) * np.cos(sphere_coord[:, 1]) * 1.5
-y_coord = np.sin(sphere_coord[:, 0]) * np.sin(sphere_coord[:, 1]) * 1.5
-z_coord = np.cos(sphere_coord[:, 0]) * 1.5
+x_coord = np.sin(sphere_coord[:, 0]) * np.cos(sphere_coord[:, 1])
+y_coord = np.sin(sphere_coord[:, 0]) * np.sin(sphere_coord[:, 1])
+z_coord = np.cos(sphere_coord[:, 0])
 
 for p1, p2, p3, i, k1, k2 in zip(x_coord, y_coord, z_coord, reqIds, keywords1, keywords2):
     crud.updateDB_skyIslandCoord('skyisland', 'tbl_sky_island_coordinate', int(i), k1, k2, p1, p2, p3)
