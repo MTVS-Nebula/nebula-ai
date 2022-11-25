@@ -71,7 +71,7 @@ class CollieFullModel_XGBR(Model):
         super().__init__()
 
     def save(self):
-        fname = f'{self.version}_{str(self.dt.year)}_{str(self.dt.month)}_{str(self.dt.day)}_{str(self.dt.hour)}_{str(self.dt.minute)}}'
+        fname = f'{self.version}_{str(self.dt.year)}_{str(self.dt.month)}_{str(self.dt.day)}_{str(self.dt.hour)}_{str(self.dt.minute)}'
         path = os.path.join(self.savedir, fname)
 
         pickle.dump(self.model, open(path + ".xgbr.model", 'wb'))
