@@ -1,11 +1,8 @@
-import pandas as pd
 import numpy as np
-import clip, os, torch, math, sys, io, requests, urllib, json, psycopg2, psycopg2.extras
+import clip, torch, requests, urllib, json, psycopg2, psycopg2.extras, transformers, umap
 from multilingual_clip import pt_multilingual_clip
-import transformers
 from PIL import Image
 from flask import Flask, request
-import umap
 
 
 app = Flask(__name__)
@@ -45,11 +42,11 @@ dict_cat2 = {
 class Databases():
     def __init__(self):
         self.db = psycopg2.connect(
-            host='*****',
-            dbname='*****',
-            user='*****',
-            password='*****',
-            port=*****
+            host='nebula-rds.cobnraaxcbeh.ap-northeast-2.rds.amazonaws.com',
+            dbname='nebula_db',
+            user='nebula_net',
+            password='mtvs1130',
+            port=5432
         )
         self.cursor = self.db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
@@ -83,34 +80,14 @@ allAppendId = dread.default_readDB()
 # 새로 추가한 값의 ID 리스트
 allDefaultId = []
 while allAppendId:
-    now = allAppendId.pop(0)
-    allDefaultId.append(now['id'])
+    now = allAppendId.pop(0)['id']
+    allDefaultId.append(now)
 
 # 가장 처음 추가된 값의 ID
-newAppendId = allDefaultId[0]
+newAppendId = allDefaultId.pop(0)
 
 
 class CRUD(Databases):
-
-    def insertDB(self, schema, table,
-                 pid, imgurl,
-                 k1, k2, k3, k4,
-                 pc1, pc2, pc3, switch):
-
-        default_query = f"""
-            INSERT INTO {schema}.{table} 
-            (id, keyword1, keyword2, pc1, pc2, pc3)
-            VALUES ("""
-        add_query = f"'{pid}', '{k1}', '{k2}', '{pc1}', '{pc2}', '{pc3}') ;"
-        sql = default_query + add_query
-        # sql = f" INSERT INTO {schema}.{table} ({colum}) VALUES ({data}) ;"
-
-        try:
-            self.cursor.execute(sql)
-            self.db.commit()
-        except Exception as e:
-            print(" insert DB err ", e)
-
     def readDB_all_tags(self):
         sql = """
             SELECT (sky.id, avttag.content) 
@@ -176,8 +153,8 @@ def query():
     keywords1, keywords2 = [], []
 
     for k, v in req.items():
-        # if k in allDefaultId:
-        #     continue
+        if k in allDefaultId:
+            continue
         skyIslandId = k
         tag1, tag2, tag3, tag4 = v['tag']
         imageUrl = v['image_url']
@@ -195,8 +172,7 @@ def query():
             text_cat_features = model.encode_text(text_tokens).float()
             text_free_features = model_multi_lang.forward(free_keyword, tokenizer).float()
 
-        image_text_feature = torch.cat([image_features, text_cat_features, text_free_features], dim=1).squeeze(
-            0)  # image 512 + text_cat 512 + text_free 512 = 1536
+        image_text_feature = torch.cat([image_features, text_cat_features, text_free_features], dim=1).squeeze(0)  # image 512 + text_cat 512 + text_free 512 = 1536
         image_text_feature = image_text_feature.detach().tolist()
         image_text_features.append(image_text_feature)
         del image_text_feature, image_features, text_cat_features, text_free_features
