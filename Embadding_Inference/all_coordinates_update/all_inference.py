@@ -2,7 +2,9 @@ import numpy as np
 import clip, torch, requests, psycopg2, psycopg2.extras, transformers, umap
 from multilingual_clip import pt_multilingual_clip
 from PIL import Image
+from flask import Flask
 
+app = Flask(__name__)
 
 model, preprocess = clip.load("ViT-B/32")
 
@@ -16,16 +18,17 @@ umap_haversine = umap.UMAP(output_metric='haversine', random_state=42)
 model.eval()
 model_multi_lang.eval()
 
+
 # alpha에서는 우선 하드코딩 형태로 적용, 추후 불러오기
 dict_cat1 = {
     "엔터테인먼트/예술": "entertainment art", "라이프스타일/취미": "lifestyle hobby", "여행/맛집": "travel restaurant", "스포츠": "sports",
-    "지식/동향": "information trends"
+    "지식/동향": "information trends", "sports":"sports"
 }
 dict_cat2 = {
     "영화/드라마": "movie and drama", "만화/애니메이션": "comics and animation", "TV방송": "TV programs", "인터넷방송": "online broadcast",
     "음악": "music", "연예인": "celebrity", "밈/움짤": "memes and gif", "게임": "game",
     "공연/전시/축제": "performance and exhibition and festival", "문학/책": "literature and books", "창작": "creation creator",
-    "결혼/육아": "weddings childrearing and childcare", "애완동물": "pet petting",
+    "결혼/육아": "weddings childrearing and childcare", "애완동물": "pet petting", "soccer":"soccer",
     "건강/피트니스": "health and fitness training", "캠핑/등산": "outdoor camping and moutain climbing",
     "맛집": "famous must-go restaurants", "카페/디저트": "caffes and desserts", "일반": "general categories",
     "축구": "soccer", "야구": "baseball", "농구": "basketball", "배구": "volleyball", "골프": "golf",
@@ -38,11 +41,11 @@ dict_cat2 = {
 class Databases():
     def __init__(self):
         self.db = psycopg2.connect(
-            host='*****',
-            dbname='*****',
-            user='*****',
-            password='*****',
-            port=*****
+            host='nebula-rds.cobnraaxcbeh.ap-northeast-2.rds.amazonaws.com',
+            dbname='nebula_db',
+            user='nebula_net',
+            password='mtvs1130',
+            port=5432
         )
         self.cursor = self.db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
@@ -93,16 +96,11 @@ class CRUD(Databases):
         except Exception as e:
             print(" update DB err", e)
 
-    def updateDB_skyIslandCoord(self, schema, table,
-                                skyIslandId, k1, k2, pc1, pc2, pc3):
-        # UPDATE demo_table
-        #     SET AGE=30, CITY='PUNJAB'
-        #     WHERE CITY='NEW DELHI';
+    def updateDB_skyIslandCoord(self, schema, table, skyIslandId, k1, k2, pc1, pc2, pc3):
         sql1 = f" UPDATE {schema}.{table} SET "
         sql2 = f"id={skyIslandId}, keyword1='{k1}', keyword2='{k2}', pc1={pc1}, pc2={pc2}, pc3={pc3} "
         sql3 = f"WHERE id = {skyIslandId}"
         sql = sql1 + sql2 + sql3
-        # {colum_update}='{value_update}' WHERE {colum_condition}='{value_condition}' "
         try:
             self.cursor.execute(sql)
             self.db.commit()
@@ -140,7 +138,6 @@ for k, v in req.items():
     skyIslandId = k
     tag1, tag2, tag3, tag4 = v['tag']
     imageUrl = v['image_url']
-
     img = preprocess(Image.open(requests.get(imageUrl, stream=True).raw)).unsqueeze(0)
 
     tag1_en = dict_cat1[tag1]
@@ -172,7 +169,13 @@ x_coord = np.sin(sphere_coord[:, 0]) * np.cos(sphere_coord[:, 1]) * 2.0
 y_coord = np.sin(sphere_coord[:, 0]) * np.sin(sphere_coord[:, 1]) * 2.0
 z_coord = np.cos(sphere_coord[:, 0]) * 2.0
 
-for p1, p2, p3, i, k1, k2 in zip(x_coord, y_coord, z_coord, reqIds, keywords1, keywords2):
-    crud.updateDB_skyIslandCoord('skyisland', 'tbl_sky_island_coordinate', int(i), k1, k2, p1, p2, p3)
 
-print('\n', 'DB UPDATE COMPLETE !')
+@app.route('/')
+def root():
+    for p1, p2, p3, i, k1, k2 in zip(x_coord, y_coord, z_coord, reqIds, keywords1, keywords2):
+        crud.updateDB_skyIslandCoord('skyisland', 'tbl_sky_island_coordinate', int(i), k1, k2, p1, p2, p3)
+    return 'COORDINATES UPDATE COMPLETE !'
+
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0')
