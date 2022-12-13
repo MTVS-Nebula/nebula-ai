@@ -19,7 +19,7 @@ spec:
         app: append-inference-deploy
     spec:
       containers:
-        - image: ktaehyun94/append_inference:v2
+        - image: ktaehyun94/append_inference:v3.3
           name: append-inference-deploy
           ports:
           - containerPort: 5000
