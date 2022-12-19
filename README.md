@@ -27,8 +27,8 @@ CodeBuild(AWS) : Build 파일 패키징 시 테스트 자동화<br>
 
 ### CD
 <b>EKS 서비스</b> <br>
-CodeBuild : Docker Image 를 만들어 Docker-hub 로 배포<br>
-Build 성공 시 해당 이미지를 EKS에 적용하여 Pod Container 를 Rolling-Update<br>
+- CodeBuild : Docker Image 를 만들어 Docker-hub 로 배포<br>
+  - Build 성공 시 해당 이미지를 EKS에 적용하여 Pod Container 를 Rolling-Update<br>
 <b>배포</b> <br>
 - [ ] ArgoCD : manifest 파일을 통해 EKS ALB 자동 적용
 
