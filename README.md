@@ -37,9 +37,9 @@ CodeBuild(AWS) : Build 파일 패키징 시 테스트 자동화<br>
 - Kubernetes
 - Docker
 - Flask
-- Docker
 - PostgreSQL
 - ArgoCD
+- Python
 - CLIP
 - UMAP
 - AWS
