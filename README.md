@@ -5,7 +5,7 @@ K8s 로 Container 를 통해 조건에 맞게 AI 모델을 실행하고, user da
 
 ### 아키텍처
 - AWS EKS 기능으로 AI 기능을 배포하고 있습니다.
-- [ ] K8s 기능으로 Data-PipeLine을 구성하고 있습니다.
+- [ ] K8s 기능으로 Data-PipeLine 을 구성하고 있습니다.
 - [ ] CodeBuild / ArgoCD 를 이용해 EKS 서비스를 적용/배포 CI/CD
 
 ### 구현 목표
