@@ -31,7 +31,7 @@ CodeBuild(AWS) : Build 파일 패키징 시 테스트 자동화<br>
   - Build 성공 시 해당 이미지를 EKS에 적용하여 Pod Container 를 Rolling-Update<br>
 
 <b>배포</b> <br>
-- [ ] ArgoCD : manifest 파일을 통해 EKS ALB 자동 적용
+- [ ] ArgoCD : manifest 파일을 통해 EKS 에서 Application-Load-Balancer / NodePort 서비스를 적용
 
 ### 개발환경
 - Kubernetes
