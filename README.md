@@ -44,7 +44,7 @@ CodeBuild(AWS) : Build 파일 패키징 시 테스트 자동화<br>
 - UMAP
 - AWS
   - EKS
-  - LoadBalancer
+  - ALB
   - AutoScaling
   - CodeBuild
   - EC2
