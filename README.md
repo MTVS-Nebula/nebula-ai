@@ -3,6 +3,8 @@ Nebula AI
 52hertz 메타버스 플랫폼의 AI 를 실행/관리하는 K8s 입니다.<br>
 K8s 로 Container 를 통해 조건에 맞게 AI 모델을 실행하고, user data 를 분석/학습하며 지속적인 AI 모델 발전을 만듭니다.<br>
 
+<p align="center"><img height="50%" width="50%" src="https://user-images.githubusercontent.com/86669008/209464843-dc1fc366-8f39-4750-8607-ea43c98df0e7.jpg"/></p>
+
 ### 아키텍처
 - AWS EKS 기능으로 AI 기능을 배포하고 있습니다.
 - [ ] K8s 기능으로 Data-PipeLine 을 구성하고 있습니다.
