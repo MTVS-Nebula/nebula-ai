@@ -20,8 +20,6 @@ umap_haversine = umap.UMAP(output_metric='haversine', random_state=42)
 model.eval()
 model_multi_lang.eval()
 
-
-# alpha에서는 우선 하드코딩 형태로 적용, 추후 불러오기
 dict_cat1 = {
     "엔터테인먼트/예술": "entertainment art", "라이프스타일/취미": "lifestyle hobby", "여행/맛집": "travel restaurant", "스포츠": "sports",
     "지식/동향": "information trends", "sports":"sports"

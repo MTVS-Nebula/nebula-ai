@@ -19,7 +19,6 @@ tokenizer = transformers.AutoTokenizer.from_pretrained(model_name)
 model.eval()
 model_multi_lang.eval()
 
-# alpha에서는 우선 하드코딩 형태로 적용, 추후 불러오기
 dict_cat1 = {
     "엔터테인먼트/예술": "entertainment art", "라이프스타일/취미": "lifestyle hobby", "여행/맛집": "travel restaurant", "스포츠": "sports",
     "지식/동향": "information trends", "sports": "sports"
@@ -35,6 +34,7 @@ dict_cat2 = {
     "IT/컴퓨터": "IT computers", "사회/정치": "social and politics", "건강/의학": "health clinic and hospital",
     "비즈니스/경제": "business and economics", "어학/외국어": "language learning", "교육/학문": "education and academic discipline",
     "경영/직장": "management and career", '요리/레시피': 'cooking/recipes', '국내여행': 'domestic travel', '해외여행': 'overseas travel'
+}
 
 
 class defaultRead(Databases):
