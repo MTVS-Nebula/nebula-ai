@@ -3,6 +3,10 @@ import clip, torch, requests, urllib, json, psycopg2, psycopg2.extras, transform
 from multilingual_clip import pt_multilingual_clip
 from PIL import Image
 from flask import Flask
+from PostgreSQL.db_auth import Databases
+from Embedding_Inference.append_coordinate_update import umap_train
+from PostgreSQL.db_CRUD import CRUD
+
 
 app = Flask(__name__)
 
@@ -31,31 +35,6 @@ dict_cat2 = {
     "IT/컴퓨터": "IT computers", "사회/정치": "social and politics", "건강/의학": "health clinic and hospital",
     "비즈니스/경제": "business and economics", "어학/외국어": "language learning", "교육/학문": "education and academic discipline",
     "경영/직장": "management and career", '요리/레시피': 'cooking/recipes', '국내여행': 'domestic travel', '해외여행': 'overseas travel'
-}
-
-
-class Databases():
-    def __init__(self):
-        self.db = psycopg2.connect(
-            host='nebula-rds.cobnraaxcbeh.ap-northeast-2.rds.amazonaws.com',
-            dbname='nebula_db',
-            user='nebula_net',
-            password='mtvs1130',
-            port=5432
-        )
-        self.cursor = self.db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-    def __del__(self):
-        self.db.close()
-        self.cursor.close()
-
-    def execute(self, query, args={}):
-        self.cursor.execute(query, args)
-        row = self.cursor.fetchall()
-        return row
-
-    def commit(self):
-        self.cursor.commit()
 
 
 class defaultRead(Databases):
@@ -80,142 +59,8 @@ while allAppendId:
 allDefaultid = str(tuple(allDefaultId))
 
 
-class CRUD(Databases):
-    def readDB_all_tags(self):
-        sql = """
-            SELECT (sky.id, avttag.content)
-            FROM skyisland.tbl_sky_island AS sky
-                INNER JOIN avatar.tbl_avatar_tag AS avttag
-                ON sky.avatar_id = avttag.avatar_id
-                WHERE sky.id in {}
-        """.format(allDefaultid)
-        self.cursor.execute(sql)
-        result = self.cursor.fetchall()
-        return result
-
-    def readDB_all_image_urls(self):
-        sql = """
-            SELECT (sky.id, atc.saved_path)
-            FROM skyisland.tbl_sky_island AS sky
-                INNER JOIN avatar.tbl_avatar AS avt
-                    ON sky.avatar_id = avt.id
-                INNER JOIN file.tbl_atc AS atc
-                    ON avt.image_id = atc.id
-                WHERE sky.id in {}
-        """.format(allDefaultid)
-        self.cursor.execute(sql)
-        result = self.cursor.fetchall()
-        return result
-
-    def updateDB(self, schema, table, colum_update, value_update, colum_condition, value_condition):
-        sql = f" UPDATE {schema}.{table} SET {colum_update}='{value_update}' WHERE {colum_condition}='{value_condition}' "
-        try:
-            self.cursor.execute(sql)
-            self.db.commit()
-        except Exception as e:
-            print(" update DB err", e)
-
-    def updateDB_skyIslandCoord(self, schema, table, skyIslandId, k1, k2, k3, k4, pc1, pc2, pc3):
-        sql1 = f" UPDATE {schema}.{table} SET "
-        sql2 = f"id={skyIslandId}, keyword1='{k1}', keyword2='{k2}', keyword3='{k3}', keyword4='{k4}', pc1={pc1}, pc2={pc2}, pc3={pc3} "
-        sql3 = f"WHERE id = {skyIslandId}"
-        sql = sql1 + sql2 + sql3
-
-        try:
-            self.cursor.execute(sql)
-            self.db.commit()
-        except Exception as e:
-            print(" update DB err", e)
-
-    def readDB_all_tag(self):
-        sql = """
-            SELECT (sky.id, avttag.content)
-            FROM skyisland.tbl_sky_island AS sky
-                INNER JOIN avatar.tbl_avatar_tag AS avttag
-                ON sky.avatar_id = avttag.avatar_id
-        """
-        self.cursor.execute(sql)
-        result = self.cursor.fetchall()
-        return result
-
-    def readDB_all_image_url(self):
-        sql = """
-            SELECT (sky.id, atc.saved_path)
-            FROM skyisland.tbl_sky_island AS sky
-                INNER JOIN avatar.tbl_avatar AS avt
-                    ON sky.avatar_id = avt.id
-                INNER JOIN file.tbl_atc AS atc
-                    ON avt.image_id = atc.id
-        """
-        self.cursor.execute(sql)
-        result = self.cursor.fetchall()
-        return result
-
-
-def umap_fit():
-    umap_haversine = umap.UMAP(output_metric='haversine', random_state=42)
-
-    temp = CRUD()
-
-    result_tag = temp.readDB_all_tag()
-    result_img = temp.readDB_all_image_url()
-
-    req = {}
-    for row in result_tag:
-        skyid = int(row['row'].split(',')[0][1:])
-        tag = row['row'].split(',')[1][:-1]
-        if skyid in req.keys():
-            req[skyid]['tag'].append(tag)
-        else:
-            req[skyid] = {'tag': [], 'image_url': ''}
-            req[skyid] = {'tag': []}
-            req[skyid]['tag'].append(tag)
-
-    for row in result_img:
-        skyid = int(row['row'].split(',')[0][1:])
-        url = row['row'].split(',')[1][:-1]
-        if skyid in req.keys():
-            req[skyid]['image_url'] = url
-
-    reqIds = []
-    image_text_features = []
-    keywords1, keywords2 = [], []
-
-    for k, v in req.items():
-        if k in allDefaultId:
-            continue
-        skyIslandId = k
-        tag1, tag2, tag3, tag4 = v['tag']
-        imageUrl = v['image_url']
-        img = preprocess(Image.open(requests.get(imageUrl, stream=True).raw)).unsqueeze(0)
-
-        tag1_en = dict_cat1[tag1]
-        tag2_en = dict_cat2[tag2]
-        preset_keyword = tag1_en + ' ' + tag2_en
-        text_tokens = clip.tokenize(preset_keyword)
-        free_keyword = tag3 + ' ' + tag4
-
-        with torch.no_grad():
-            image_features = model.encode_image(img).float()
-            text_cat_features = model.encode_text(text_tokens).float()
-            text_free_features = model_multi_lang.forward(free_keyword, tokenizer).float()
-
-        image_text_feature = torch.cat([image_features, text_cat_features, text_free_features], dim=1).squeeze(0)  # image 512 + text_cat 512 + text_free 512 = 1536
-        image_text_feature = image_text_feature.detach().tolist()
-        image_text_features.append(image_text_feature)
-        del image_text_feature, text_cat_features, text_free_features, image_features
-
-        reqIds.append(int(skyIslandId))
-        keywords1.append(tag1)
-        keywords2.append(tag2)
-
-    # UMAP
-    umap_haversine.fit(image_text_features)
-
-    return umap_haversine
-
 if allDefaultid != '()':
-    umap_haversine = umap_fit()
+    umap_haversine = umap_train.fit(allDefaultId, dict_cat1, dict_cat2, model, preprocess, model_multi_lang, tokenizer)
 
     crud = CRUD()
 
@@ -293,4 +138,4 @@ def root():
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0')
+    app.run()

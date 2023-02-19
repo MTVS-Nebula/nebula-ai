@@ -3,6 +3,8 @@ import clip, torch, requests, psycopg2, psycopg2.extras, transformers, umap
 from multilingual_clip import pt_multilingual_clip
 from PIL import Image
 from flask import Flask
+from PostgreSQL.db_CRUD import CRUD
+
 
 app = Flask(__name__)
 
@@ -36,77 +38,6 @@ dict_cat2 = {
     "비즈니스/경제": "business and economics", "어학/외국어": "language learning", "교육/학문": "education and academic discipline",
     "경영/직장": "management and career", '요리/레시피': 'cooking/recipes', '국내여행': 'domestic travel', '해외여행': 'overseas travel'
 }
-
-
-class Databases():
-    def __init__(self):
-        self.db = psycopg2.connect(
-            host='*****',
-            dbname='*****',
-            user='*****',
-            password='*****',
-            port=*****
-        )
-        self.cursor = self.db.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
-
-    def __del__(self):
-        self.db.close()
-        self.cursor.close()
-
-    def execute(self, query, args={}):
-        self.cursor.execute(query, args)
-        row = self.cursor.fetchall()
-        return row
-
-    def commit(self):
-        self.cursor.commit()
-
-
-class CRUD(Databases):
-
-    def readDB_all_tags(self):
-        sql = """
-            SELECT (sky.id, avttag.content) 
-            FROM skyisland.tbl_sky_island AS sky
-                INNER JOIN avatar.tbl_avatar_tag AS avttag
-                ON sky.avatar_id = avttag.avatar_id
-        """
-        self.cursor.execute(sql)
-        result = self.cursor.fetchall()
-        return result
-
-    def readDB_all_image_urls(self):
-        sql = """
-            SELECT (sky.id, atc.saved_path) 
-            FROM skyisland.tbl_sky_island AS sky
-                INNER JOIN avatar.tbl_avatar AS avt
-                    ON sky.avatar_id = avt.id
-                INNER JOIN file.tbl_atc AS atc
-                    ON avt.image_id = atc.id
-        """
-        self.cursor.execute(sql)
-        result = self.cursor.fetchall()
-        return result
-
-    def updateDB(self, schema, table, colum_update, value_update, colum_condition, value_condition):
-        sql = f" UPDATE {schema}.{table} SET {colum_update}='{value_update}' WHERE {colum_condition}='{value_condition}' "
-        try:
-            self.cursor.execute(sql)
-            self.db.commit()
-        except Exception as e:
-            print(" update DB err", e)
-
-    def updateDB_skyIslandCoord(self, schema, table, skyIslandId, k1, k2, pc1, pc2, pc3):
-        sql1 = f" UPDATE {schema}.{table} SET "
-        sql2 = f"id={skyIslandId}, keyword1='{k1}', keyword2='{k2}', pc1={pc1}, pc2={pc2}, pc3={pc3} "
-        sql3 = f"WHERE id = {skyIslandId}"
-        sql = sql1 + sql2 + sql3
-        try:
-            self.cursor.execute(sql)
-            self.db.commit()
-        except Exception as e:
-            print(" update DB err", e)
-
 
 crud = CRUD()
 
@@ -144,7 +75,6 @@ for k, v in req.items():
     tag2_en = dict_cat2[tag2]
     preset_keyword = tag1_en + ' ' + tag2_en
     text_tokens = clip.tokenize(preset_keyword)
-    # free_keyword = tag1 + ' ' + tag2 + ' ' + tag3 + ' ' + tag4
     free_keyword = tag3 + ' ' + tag4
 
     with torch.no_grad():
@@ -176,6 +106,5 @@ def root():
         crud.updateDB_skyIslandCoord('skyisland', 'tbl_sky_island_coordinate', int(i), k1, k2, p1, p2, p3)
     return 'COORDINATES UPDATE COMPLETE !'
 
-
 if __name__ == '__main__':
-    app.run(host='0.0.0.0')
+    app.run()
