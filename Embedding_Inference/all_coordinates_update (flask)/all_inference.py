@@ -20,6 +20,8 @@ umap_haversine = umap.UMAP(output_metric='haversine', random_state=42)
 model.eval()
 model_multi_lang.eval()
 
+
+# alpha에서는 우선 하드코딩 형태로 적용, 추후 불러오기
 dict_cat1 = {
     "엔터테인먼트/예술": "entertainment art", "라이프스타일/취미": "lifestyle hobby", "여행/맛집": "travel restaurant", "스포츠": "sports",
     "지식/동향": "information trends", "sports":"sports"
@@ -38,68 +40,71 @@ dict_cat2 = {
 }
 
 crud = CRUD()
+def coordinate():
+    result_tag = crud.readDB_all_tags()
+    result_img = crud.readDB_all_image_urls()
 
-result_tag = crud.readDB_all_tags()
-result_img = crud.readDB_all_image_urls()
+    req = {}
+    for row in result_tag:
+        skyid = int(row['row'].split(',')[0][1:])
+        tag = row['row'].split(',')[1][:-1]
+        if skyid in req.keys():
+            req[skyid]['tag'].append(tag)
+        else:
+            req[skyid] = {'tag': [], 'image_url': ''}
+            req[skyid] = {'tag': []}
+            req[skyid]['tag'].append(tag)
 
-req = {}
-for row in result_tag:
-    skyid = int(row['row'].split(',')[0][1:])
-    tag = row['row'].split(',')[1][:-1]
-    if skyid in req.keys():
-        req[skyid]['tag'].append(tag)
-    else:
-        req[skyid] = {'tag': [], 'image_url': ''}
-        req[skyid] = {'tag': []}
-        req[skyid]['tag'].append(tag)
+    for row in result_img:
+        skyid = int(row['row'].split(',')[0][1:])
+        url = row['row'].split(',')[1][:-1]
+        if skyid in req.keys():
+            req[skyid]['image_url'] = url
 
-for row in result_img:
-    skyid = int(row['row'].split(',')[0][1:])
-    url = row['row'].split(',')[1][:-1]
-    if skyid in req.keys():
-        req[skyid]['image_url'] = url
+    reqIds = []
+    image_text_features = []
+    keywords1, keywords2 = [], []
 
-reqIds = []
-image_text_features = []
-keywords1, keywords2 = [], []
+    for k, v in req.items():
+        skyIslandId = k
+        tag1, tag2, tag3, tag4 = v['tag']
+        imageUrl = v['image_url']
+        img = preprocess(Image.open(requests.get(imageUrl, stream=True).raw)).unsqueeze(0)
 
-for k, v in req.items():
-    skyIslandId = k
-    tag1, tag2, tag3, tag4 = v['tag']
-    imageUrl = v['image_url']
-    img = preprocess(Image.open(requests.get(imageUrl, stream=True).raw)).unsqueeze(0)
+        tag1_en = dict_cat1[tag1]
+        tag2_en = dict_cat2[tag2]
+        preset_keyword = tag1_en + ' ' + tag2_en
+        text_tokens = clip.tokenize(preset_keyword)
+        free_keyword = tag3 + ' ' + tag4
 
-    tag1_en = dict_cat1[tag1]
-    tag2_en = dict_cat2[tag2]
-    preset_keyword = tag1_en + ' ' + tag2_en
-    text_tokens = clip.tokenize(preset_keyword)
-    free_keyword = tag3 + ' ' + tag4
+        with torch.no_grad():
+            image_features = model.encode_image(img).float()
+            text_cat_features = model.encode_text(text_tokens).float()
+            text_free_features = model_multi_lang.forward(free_keyword, tokenizer).float()
 
-    with torch.no_grad():
-        image_features = model.encode_image(img).float()
-        text_cat_features = model.encode_text(text_tokens).float()
-        text_free_features = model_multi_lang.forward(free_keyword, tokenizer).float()
+        image_text_feature = torch.cat([image_features, text_cat_features, text_free_features], dim=1).squeeze(0)  # image 512 + text_cat 512 + text_free 512 = 1536
+        image_text_feature = image_text_feature.detach().tolist()
+        image_text_features.append(image_text_feature)
+        del image_text_feature, text_cat_features, text_free_features, image_features
 
-    image_text_feature = torch.cat([image_features, text_cat_features, text_free_features], dim=1).squeeze(0)  # image 512 + text_cat 512 + text_free 512 = 1536
-    image_text_feature = image_text_feature.detach().tolist()
-    image_text_features.append(image_text_feature)
-    del image_text_feature, text_cat_features, text_free_features, image_features
+        reqIds.append(int(skyIslandId))
+        keywords1.append(tag1)
+        keywords2.append(tag2)
 
-    reqIds.append(int(skyIslandId))
-    keywords1.append(tag1)
-    keywords2.append(tag2)
+    # UMAP
+    sphere_coord = umap_haversine.fit_transform(image_text_features)
+    del image_text_features
 
-# UMAP
-sphere_coord = umap_haversine.fit_transform(image_text_features)
-del image_text_features
+    x_coord = np.sin(sphere_coord[:, 0]) * np.cos(sphere_coord[:, 1]) * 2.0
+    y_coord = np.sin(sphere_coord[:, 0]) * np.sin(sphere_coord[:, 1]) * 2.0
+    z_coord = np.cos(sphere_coord[:, 0]) * 2.0
 
-x_coord = np.sin(sphere_coord[:, 0]) * np.cos(sphere_coord[:, 1]) * 2.0
-y_coord = np.sin(sphere_coord[:, 0]) * np.sin(sphere_coord[:, 1]) * 2.0
-z_coord = np.cos(sphere_coord[:, 0]) * 2.0
+    return x_coord, y_coord, z_coord, reqIds, keywords1, keywords2
 
 
 @app.route('/')
 def root():
+    x_coord, y_coord, z_coord, reqIds, keywords1, keywords2 = coordinate()
     for p1, p2, p3, i, k1, k2 in zip(x_coord, y_coord, z_coord, reqIds, keywords1, keywords2):
         crud.updateDB_skyIslandCoord('skyisland', 'tbl_sky_island_coordinate', int(i), k1, k2, p1, p2, p3)
     return 'COORDINATES UPDATE COMPLETE !'
