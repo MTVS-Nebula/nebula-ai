@@ -24,7 +24,7 @@ K8s 로 Container 를 통해 조건에 맞게 AI 모델을 실행하고, user da
 - [ ] Docker Image 버전 업데이트
 <br><br>
 
-<b>Embadding Update</b><br>
+<b>Embedding Update</b><br>
 - 새로운 프로필이 생성(추가)될 때, 생성된 프로필에 해당하는 섬의 좌표에 대해서만 Embadding 실행
 - 1번씩/시간 전체 섬에 대한 프로필 정보로 AI 모델에 fit_transform 하여 전체 섬에 대해 Clustering & Embadding 실행
 <br><br>
