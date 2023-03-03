@@ -12,7 +12,7 @@ K8s 로 Container 를 통해 조건에 맞게 AI 모델을 실행하고, user da
 
 ### 구현 목표
 <b>AI 모델 이용의 최적화</b><br>
-- Embadding AI 모델이 완전히 실행되기까지 5~15초의 시간 문제 해결
+- Embedding AI 모델이 완전히 실행되기까지 5~15초의 시간 문제 해결
 - 여러 이용자가 한 번에 해당 기능을 동작하면 속도/서비스 측면에서 경량화
 - Deployment-Controller 를 이용해 HPA 를 설정하여 Pod 별로 서비스를 제공함
 - Load-Balancer 기능으로 서비스에 가용할 수 자원의 K8s Node 를 자동으로 이용함
