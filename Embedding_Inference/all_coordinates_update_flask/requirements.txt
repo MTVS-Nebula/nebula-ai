@@ -1,0 +1,11 @@
+numpy==1.23.4
+requests==2.28.1
+pillow==9.2.0
+scikit-learn==1.1.2
+https://github.com/openai/CLIP/archive/master.zip
+psycopg2==2.9.4
+multilingual-clip==1.0.10
+open_clip_torch==2.0.2
+transformers==4.24.0
+umap-learn==0.5.3
+flask==2.2.2
